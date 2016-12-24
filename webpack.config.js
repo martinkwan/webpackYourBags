@@ -1,9 +1,14 @@
 const webpack = require('webpack');
+const CleanPlugin = require('clean-webpack-plugin');
+const ExtractPlugin = require('extract-text-webpack-plugin');
+
+
 const production = process.env.NODE_ENV === 'production';
 
-const plugins = [
+let plugins = [
+  new ExtractPlugin('bundle.css'), // <=== where should content be piped
   new webpack.optimize.CommonsChunkPlugin({
-    name: 'vendor', // Move dependencies to our main file
+    name: 'main', // Move dependencies to our main file
     children: 'true', // Look for common dependencies in all children,
     minChunks: 2, // How many times a dependency must come up before being extracted
   }),
@@ -11,6 +16,10 @@ const plugins = [
 
 if (production) {
   plugins = plugins.concat([
+    // Cleanup the builds/ folder before
+    // compiling our final assets
+    new CleanPlugin('builds'),
+
     // This plugin looks for similar chunks and files
     // and merges them for better caching by the user
     new webpack.optimize.DedupePlugin(),
@@ -43,6 +52,7 @@ if (production) {
       'process.env':   {
         BABEL_ENV: JSON.stringify(process.env.NODE_ENV),
       },
+    }),
   ]);
 }
 
@@ -51,9 +61,10 @@ module.exports = {
     devtool: production ? false : 'eval',
     entry:  './src',
     output: {
-        path:     'builds',
-        filename: 'bundle.js',
-        publicPath: 'builds/',
+        path:          'builds',
+        filename:      production ? '[name]-[hash].js' : 'bundle.js',
+        chunkFilename: '[name]-[chunkhash].js',
+        publicPath:    'builds/',
     },
     plugins: plugins,
     module: {
@@ -65,12 +76,19 @@ module.exports = {
         },
         {
           test: /\.scss/,
-          loaders: ['style', 'css', 'sass'],
+          loader: ExtractPlugin.extract('style', 'css!sass'),
         },
         {
           test: /\.html/,
           loader: 'html',
-        }
+        },
+        {
+          test:   /\.(png|gif|jpe?g|svg)$/i,
+          loader: 'url',
+          query: {
+            limit: 10000,
+          }
+        },
       ],
     }
 };

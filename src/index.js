@@ -1,4 +1,4 @@
-
+import './styles.scss';
 // If we have an anchor, render the Button component on it
 if (document.querySelectorAll('a').length){
   require.ensure([], () => {
